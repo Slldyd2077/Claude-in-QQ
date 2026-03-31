@@ -1,0 +1,128 @@
+# Claude in QQ
+
+> 更适合中国程序员体质的 Claude Code Channel ~
+
+A QQ (NapCat/OneBot v11) channel for [Claude Code](https://claude.ai/code), enabling Claude to receive and reply to QQ messages in real time.
+
+**Why?** Claude Code's official channels only support Telegram — not great for users in China. This project bridges that gap, letting Chinese developers use Claude Code through QQ natively.
+
+## Features
+
+- **Private & Group Chat** — Supports DM and group messages with @-triggering
+- **Access Control** — Pairing, allowlist, and group-level policies
+- **Message Bridge** — WebSocket-based polling with file-based inbox
+- **Rich Media** — Image download, file attachments, face stickers
+- **Text Chunking** — Auto-split long responses to fit QQ message limits
+
+## Architecture
+
+```
+QQ Message → NapCat (OneBot v11) → WebSocket → qq-poll.ts → messages.jsonl
+                                                            ↓
+Claude Code ← cron poll ← messages.jsonl → mcp__qq__reply → NapCat HTTP API → QQ
+```
+
+- **Inbound**: NapCat WS (port 6007) → `qq-poll.ts` writes to `messages.jsonl`
+- **Processing**: Claude Code cron polls `messages.jsonl`, processes each message
+- **Outbound**: `mcp__qq__reply` tool → NapCat HTTP API (port 5700) → QQ
+
+## Quick Start
+
+### Prerequisites
+
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI installed
+- [NapCat](https://github.com/NapNeko/NapCatQQ) running with OneBot v11 enabled
+- [Bun](https://bun.sh/) runtime
+
+### 1. Configure NapCat
+
+In your NapCat config (`data/config_<QQ_ID>.json`), enable:
+
+- **HTTP API** on port 5700
+- **WebSocket Server** on port 6007
+- **HTTP POST** reporting to `http://127.0.0.1:9801` (optional, for direct MCP mode)
+
+### 2. Install
+
+```bash
+git clone https://github.com/<your-username>/claude-channel-qq.git
+cd claude-channel-qq
+bun install
+```
+
+### 3. Configure Channel
+
+Create `~/.claude/channels/qq/.env`:
+
+```env
+QQ_NAPCAT_HTTP_URL=http://127.0.0.1:5700
+QQ_HTTP_POST_PORT=9801
+```
+
+Run the access skill to approve your QQ ID:
+
+```bash
+# In Claude Code:
+/qq:access allow <your_qq_number>
+```
+
+### 4. Start the Bridge
+
+```bash
+bun run qq-poll.ts
+```
+
+This starts the WebSocket listener that captures QQ messages and writes them to the inbox.
+
+### 5. Start Claude Code with Cron
+
+In your Claude Code session, set up a cron to poll the inbox:
+
+```
+# Every minute, check for new QQ messages and process them
+```
+
+Claude Code will read new messages from `~/.claude/channels/qq/inbox/messages.jsonl`, process them, and reply via the MCP tools.
+
+## Project Structure
+
+```
+claude-channel-qq/
+├── server.ts          # MCP server (stdio + HTTP, 945 lines)
+├── qq-poll.ts         # WebSocket bridge (NapCat → file inbox)
+├── package.json       # Dependencies: @modelcontextprotocol/sdk, ws
+├── .mcp.json          # MCP server configuration for Claude Code
+├── skills/
+│   ├── access/        # /qq:access — manage allowlist, pairing, groups
+│   │   └── SKILL.md
+│   └── configure/     # /qq:configure — initial setup
+│       └── SKILL.md
+└── CHANGELOG.md       # Project log
+```
+
+## Access Control
+
+The channel uses a three-tier access system managed via `/qq:access`:
+
+| Policy | Behavior |
+|--------|----------|
+| `pairing` | New users get a 6-char code; user runs `/qq:access pair <code>` to approve |
+| `allowlist` | Only pre-approved QQ IDs can message |
+| `disabled` | All DMs dropped |
+
+Groups support per-group `allowFrom` lists and `requireAt` (must @ the bot).
+
+## Configuration
+
+Environment variables (in `~/.claude/channels/qq/.env`):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `QQ_NAPCAT_HTTP_URL` | `http://127.0.0.1:5700` | NapCat HTTP API endpoint |
+| `QQ_HTTP_POST_PORT` | `9801` | HTTP POST listener port |
+| `QQ_ACCESS_MODE` | (dynamic) | Set to `static` for read-only access |
+| `QQ_STATE_DIR` | `~/.claude/channels/qq` | State directory |
+
+## License
+
+MIT

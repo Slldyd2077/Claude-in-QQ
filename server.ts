@@ -522,6 +522,19 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ['chat_id', 'message_id', 'text'],
       },
     },
+    {
+      name: 'send_file',
+      description: 'Send a local file to a QQ user or group. Supports images (inline), documents, and other file types. Max 100MB per file.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          chat_id: { type: 'string', description: 'QQ user_id (DM) or group_id (group)' },
+          file_path: { type: 'string', description: 'Absolute path to the local file to send' },
+          file_name: { type: 'string', description: 'Optional display name for the file' },
+        },
+        required: ['chat_id', 'file_path'],
+      },
+    },
   ],
 }))
 
@@ -699,6 +712,74 @@ mcp.setRequestHandler(CallToolRequestSchema, async req => {
 
         const newId = result.status === 'ok' && result.data ? result.data.message_id : 'unknown'
         return { content: [{ type: 'text', text: `edited (new id: ${newId})` }] }
+      }
+
+      case 'send_file': {
+        const chat_id = args.chat_id as string
+        const file_path = args.file_path as string
+        const file_name = (args.file_name as string | undefined) ?? file_path.split(/[\\/]/).pop() ?? 'file'
+
+        assertAllowedChat(chat_id)
+
+        // Security: validate file path
+        if (!file_path.startsWith('/') && !file_path.match(/^[A-Za-z]:\\/)) {
+          throw new Error('file_path must be an absolute path')
+        }
+
+        // Check file exists and size
+        const st = statSync(file_path)
+        if (st.size > 100 * 1024 * 1024) {
+          throw new Error(`file too large: ${(st.size / 1024 / 1024).toFixed(1)}MB, max 100MB`)
+        }
+
+        const access = loadAccess()
+        const isGroup = chat_id in access.groups
+        const fileUri = `file:///${file_path.replace(/\\/g, '/')}`
+
+        // Determine file type from extension
+        const ext = extname(file_path).toLowerCase()
+        const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg']
+        const isImage = imageExts.includes(ext)
+
+        if (isImage) {
+          // Send image inline
+          const message: MessageSegment[] = [
+            { type: 'image', data: { file: fileUri } },
+          ]
+          const result = isGroup
+            ? await napcatSendGroupMsg(Number(chat_id), message)
+            : await napcatSendPrivateMsg(Number(chat_id), message)
+
+          const msgId = result.status === 'ok' && result.data ? result.data.message_id : 'unknown'
+          return { content: [{ type: 'text', text: `image sent (id: ${msgId})` }] }
+        } else {
+          // Send as file via upload API
+          const endpoint = isGroup ? '/upload_group_file' : '/upload_private_file'
+          const params: Record<string, unknown> = {
+            file: fileUri,
+            name: file_name,
+          }
+          if (isGroup) {
+            params.group_id = Number(chat_id)
+          } else {
+            params.user_id = Number(chat_id)
+          }
+          const result = await napcatPost(endpoint, params)
+          if (result.status === 'ok') {
+            return { content: [{ type: 'text', text: `file sent: ${file_name}` }] }
+          } else {
+            // Fallback: send as file message segment
+            const message: MessageSegment[] = [
+              { type: 'file', data: { file: fileUri, name: file_name } },
+            ]
+            const fallbackResult = isGroup
+              ? await napcatSendGroupMsg(Number(chat_id), message)
+              : await napcatSendPrivateMsg(Number(chat_id), message)
+
+            const msgId = fallbackResult.status === 'ok' && fallbackResult.data ? fallbackResult.data.message_id : 'unknown'
+            return { content: [{ type: 'text', text: `file sent (fallback): ${file_name} (id: ${msgId})` }] }
+          }
+        }
       }
 
       default:
