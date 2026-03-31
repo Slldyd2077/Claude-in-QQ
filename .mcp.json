@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "qq": {
+      "command": "bun",
+      "args": ["run", "C:\\Claude in QQ\\server.ts"]
+    }
+  }
+}
