@@ -6,7 +6,16 @@
       "Bash(mkdir -p \"$HOME/.claude/channels/qq\")",
       "Bash(\"$HOME/.claude/channels/qq/.env\":*)",
       "Read(//c/Claude in QQ/$HOME/.claude/channels/qq/**)",
-      "Bash(timeout 8 bun server.ts)"
+      "Bash(timeout 8 bun server.ts)",
+      "Read",
+      "Glob",
+      "Grep",
+      "WebSearch",
+      "mcp__qq__reply",
+      "mcp__qq__edit_message",
+      "mcp__qq__download_attachment",
+      "mcp__qq__send_file",
+      "mcp__qq__react"
     ]
   }
 }

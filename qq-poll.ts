@@ -66,6 +66,7 @@ function connect() {
       const msg = JSON.parse(raw)
 
       if (msg.post_type !== 'message') return
+      if (msg.message_type === 'group') return // ignore group messages
 
       const userId = String(msg.user_id)
       if (!ALLOWED_USERS.includes(userId)) return

@@ -22,6 +22,7 @@
 - **消息桥接** — 基于 WebSocket 的消息轮询 + 文件收件箱
 - **富媒体支持** — 图片下载、文件附件、QQ 表情
 - **文本分片** — 自动拆分超长回复，适配 QQ 消息长度限制
+- **免确认体验** — 常用工具自动批准，需要用户选择时通过 QQ 交互，无需回到终端
 
 ## 架构
 
@@ -31,8 +32,8 @@ QQ 消息 → NapCat (OneBot v11) → WebSocket → qq-poll.ts → messages.json
 Claude Code ← cron 轮询 ← messages.jsonl → mcp__qq__reply → NapCat HTTP API → QQ
 ```
 
-- **入站**：NapCat WS (端口 6007) → `qq-poll.ts` 写入 `messages.jsonl`
-- **处理**：Claude Code 定时轮询 `messages.jsonl`，处理每条消息
+- **入站**：NapCat WS (端口 6007) → `qq-poll.ts` 过滤群消息、检查白名单后写入 `messages.jsonl`
+- **处理**：Claude Code 定时轮询 `messages.jsonl`，处理每条消息，常用工具自动批准
 - **出站**：`mcp__qq__reply` 工具 → NapCat HTTP API (端口 5700) → QQ
 
 ## 快速开始

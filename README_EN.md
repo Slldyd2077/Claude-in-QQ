@@ -22,6 +22,7 @@ A QQ (NapCat/OneBot v11) channel for [Claude Code](https://claude.ai/code), enab
 - **Message Bridge** — WebSocket-based polling with file-based inbox
 - **Rich Media** — Image download, file attachments, face stickers
 - **Text Chunking** — Auto-split long responses to fit QQ message limits
+- **Seamless Interaction** — Common tools auto-approved; user confirmations routed through QQ instead of terminal
 
 ## Architecture
 
@@ -31,8 +32,8 @@ QQ Message → NapCat (OneBot v11) → WebSocket → qq-poll.ts → messages.jso
 Claude Code ← cron poll ← messages.jsonl → mcp__qq__reply → NapCat HTTP API → QQ
 ```
 
-- **Inbound**: NapCat WS (port 6007) → `qq-poll.ts` writes to `messages.jsonl`
-- **Processing**: Claude Code cron polls `messages.jsonl`, processes each message
+- **Inbound**: NapCat WS (port 6007) → `qq-poll.ts` filters group messages, checks allowlist, writes to `messages.jsonl`
+- **Processing**: Claude Code cron polls `messages.jsonl`, processes each message with auto-approved tools
 - **Outbound**: `mcp__qq__reply` tool → NapCat HTTP API (port 5700) → QQ
 
 ## Quick Start
