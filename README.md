@@ -2,127 +2,140 @@
 
 > 更适合中国程序员体质的 Claude Code Channel ~
 
-A QQ (NapCat/OneBot v11) channel for [Claude Code](https://claude.ai/code), enabling Claude to receive and reply to QQ messages in real time.
+[English](./README_EN.md)
 
-**Why?** Claude Code's official channels only support Telegram — not great for users in China. This project bridges that gap, letting Chinese developers use Claude Code through QQ natively.
+一个基于 [NapCat/OneBot v11](https://github.com/NapNeko/NapCatQQ) 的 QQ 频道，让 [Claude Code](https://claude.ai/code) 能实时接收和回复 QQ 消息。
 
-## Features
+**为什么要做这个？** Claude Code 官方只支持 Telegram Channel，对国内用户极不友好。这个项目让中国开发者能通过 QQ 直接使用 Claude Code 进行编程辅助，无需科学上网。
 
-- **Private & Group Chat** — Supports DM and group messages with @-triggering
-- **Access Control** — Pairing, allowlist, and group-level policies
-- **Message Bridge** — WebSocket-based polling with file-based inbox
-- **Rich Media** — Image download, file attachments, face stickers
-- **Text Chunking** — Auto-split long responses to fit QQ message limits
+## 功能特性
 
-## Architecture
+- **私聊 & 群聊** — 支持私聊和群聊消息，群聊支持 @ 触发
+- **访问控制** — 配对码验证、白名单、群组级别策略
+- **消息桥接** — 基于 WebSocket 的消息轮询 + 文件收件箱
+- **富媒体支持** — 图片下载、文件附件、QQ 表情
+- **文本分片** — 自动拆分超长回复，适配 QQ 消息长度限制
+
+## 架构
 
 ```
-QQ Message → NapCat (OneBot v11) → WebSocket → qq-poll.ts → messages.jsonl
-                                                            ↓
-Claude Code ← cron poll ← messages.jsonl → mcp__qq__reply → NapCat HTTP API → QQ
+QQ 消息 → NapCat (OneBot v11) → WebSocket → qq-poll.ts → messages.jsonl
+                                                              ↓
+Claude Code ← cron 轮询 ← messages.jsonl → mcp__qq__reply → NapCat HTTP API → QQ
 ```
 
-- **Inbound**: NapCat WS (port 6007) → `qq-poll.ts` writes to `messages.jsonl`
-- **Processing**: Claude Code cron polls `messages.jsonl`, processes each message
-- **Outbound**: `mcp__qq__reply` tool → NapCat HTTP API (port 5700) → QQ
+- **入站**：NapCat WS (端口 6007) → `qq-poll.ts` 写入 `messages.jsonl`
+- **处理**：Claude Code 定时轮询 `messages.jsonl`，处理每条消息
+- **出站**：`mcp__qq__reply` 工具 → NapCat HTTP API (端口 5700) → QQ
 
-## Quick Start
+## 快速开始
 
-### Prerequisites
+### 前置条件
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI installed
-- [NapCat](https://github.com/NapNeko/NapCatQQ) running with OneBot v11 enabled
-- [Bun](https://bun.sh/) runtime
+- 已安装 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI
+- 已运行 [NapCat](https://github.com/NapNeko/NapCatQQ) 并启用 OneBot v11
+- 已安装 [Bun](https://bun.sh/) 运行时
 
-### 1. Configure NapCat
+### 1. 配置 NapCat
 
-In your NapCat config (`data/config_<QQ_ID>.json`), enable:
+在 NapCat 配置文件（`data/config_<QQ号>.json`）中启用：
 
-- **HTTP API** on port 5700
-- **WebSocket Server** on port 6007
-- **HTTP POST** reporting to `http://127.0.0.1:9801` (optional, for direct MCP mode)
+- **HTTP API** 端口 5700
+- **WebSocket Server** 端口 6007
+- **HTTP POST** 上报到 `http://127.0.0.1:9801`（可选，用于直接 MCP 模式）
 
-### 2. Install
+### 2. 安装
 
 ```bash
-git clone https://github.com/<your-username>/claude-channel-qq.git
-cd claude-channel-qq
+git clone https://github.com/Slldyd2077/Claude-in-QQ.git
+cd Claude-in-QQ
 bun install
 ```
 
-### 3. Configure Channel
+### 3. 配置频道
 
-Create `~/.claude/channels/qq/.env`:
+创建 `~/.claude/channels/qq/.env`：
 
 ```env
 QQ_NAPCAT_HTTP_URL=http://127.0.0.1:5700
 QQ_HTTP_POST_PORT=9801
 ```
 
-Run the access skill to approve your QQ ID:
+运行 access skill 授权你的 QQ 号：
 
 ```bash
-# In Claude Code:
-/qq:access allow <your_qq_number>
+# 在 Claude Code 中：
+/qq:access allow <你的QQ号>
 ```
 
-### 4. Start the Bridge
+### 4. 启动桥接脚本
 
 ```bash
 bun run qq-poll.ts
 ```
 
-This starts the WebSocket listener that captures QQ messages and writes them to the inbox.
+启动 WebSocket 监听器，捕获 QQ 消息并写入收件箱。
 
-### 5. Start Claude Code with Cron
+### 5. 在 Claude Code 中设置定时轮询
 
-In your Claude Code session, set up a cron to poll the inbox:
-
-```
-# Every minute, check for new QQ messages and process them
-```
-
-Claude Code will read new messages from `~/.claude/channels/qq/inbox/messages.jsonl`, process them, and reply via the MCP tools.
-
-## Project Structure
+在 Claude Code 会话中，设置 cron 定时检查收件箱：
 
 ```
-claude-channel-qq/
-├── server.ts          # MCP server (stdio + HTTP, 945 lines)
-├── qq-poll.ts         # WebSocket bridge (NapCat → file inbox)
-├── package.json       # Dependencies: @modelcontextprotocol/sdk, ws
-├── .mcp.json          # MCP server configuration for Claude Code
+# 每分钟检查新的 QQ 消息并处理
+```
+
+Claude Code 会从 `~/.claude/channels/qq/inbox/messages.jsonl` 读取新消息，处理后通过 MCP 工具回复。
+
+## 项目结构
+
+```
+Claude-in-QQ/
+├── server.ts          # MCP 服务器（stdio + HTTP，945 行）
+├── qq-poll.ts         # WebSocket 桥接（NapCat → 文件收件箱）
+├── package.json       # 依赖：@modelcontextprotocol/sdk, ws
+├── .mcp.json          # Claude Code 的 MCP 服务器配置
+├── setup.sh           # 首次安装脚本
 ├── skills/
-│   ├── access/        # /qq:access — manage allowlist, pairing, groups
+│   ├── access/        # /qq:access — 管理白名单、配对、群组
 │   │   └── SKILL.md
-│   └── configure/     # /qq:configure — initial setup
+│   └── configure/     # /qq:configure — 初始配置
 │       └── SKILL.md
-└── CHANGELOG.md       # Project log
+├── README.md          # 中文说明（本文件）
+├── README_EN.md       # 英文说明
+├── CHANGELOG.md       # 项目日志
+└── LICENSE            # MIT 协议
 ```
 
-## Access Control
+## 访问控制
 
-The channel uses a three-tier access system managed via `/qq:access`:
+频道使用三级访问系统，通过 `/qq:access` 管理：
 
-| Policy | Behavior |
-|--------|----------|
-| `pairing` | New users get a 6-char code; user runs `/qq:access pair <code>` to approve |
-| `allowlist` | Only pre-approved QQ IDs can message |
-| `disabled` | All DMs dropped |
+| 策略 | 行为 |
+|------|------|
+| `pairing`（配对） | 新用户获得 6 位验证码；用户在终端运行 `/qq:access pair <code>` 批准 |
+| `allowlist`（白名单） | 只有预先批准的 QQ 号可以发消息 |
+| `disabled`（禁用） | 拒绝所有私聊 |
 
-Groups support per-group `allowFrom` lists and `requireAt` (must @ the bot).
+群聊支持按群设置 `allowFrom` 白名单和 `requireAt`（需要 @ 机器人才响应）。
 
-## Configuration
+## 配置项
 
-Environment variables (in `~/.claude/channels/qq/.env`):
+环境变量（在 `~/.claude/channels/qq/.env` 中配置）：
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `QQ_NAPCAT_HTTP_URL` | `http://127.0.0.1:5700` | NapCat HTTP API endpoint |
-| `QQ_HTTP_POST_PORT` | `9801` | HTTP POST listener port |
-| `QQ_ACCESS_MODE` | (dynamic) | Set to `static` for read-only access |
-| `QQ_STATE_DIR` | `~/.claude/channels/qq` | State directory |
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `QQ_NAPCAT_HTTP_URL` | `http://127.0.0.1:5700` | NapCat HTTP API 地址 |
+| `QQ_HTTP_POST_PORT` | `9801` | HTTP POST 监听端口 |
+| `QQ_ACCESS_MODE` | （动态） | 设为 `static` 启用只读访问模式 |
+| `QQ_STATE_DIR` | `~/.claude/channels/qq` | 状态文件目录 |
 
-## License
+## 安全说明
 
-MIT
+- 所有配置文件存储在 `~/.claude/channels/qq/` 用户目录下，不随项目仓库分发
+- `access.json` 权限设为 600（仅当前用户可读写）
+- `.env` 文件不含密钥/Token，仅包含本地地址和端口
+- 聊天记录（`messages.jsonl`、`processed.jsonl`）在用户本地，已加入 `.gitignore`
+
+## 开源协议
+
+MIT License — 详见 [LICENSE](./LICENSE) 文件
