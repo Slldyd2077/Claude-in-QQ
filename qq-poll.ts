@@ -12,7 +12,7 @@ const NAPCAT_HTTP = process.env.QQ_NAPCAT_HTTP_URL ?? 'http://127.0.0.1:5700'
 const INBOX = process.env.QQ_INBOX ?? `${process.env.HOME}/.claude/channels/qq/inbox`
 const ALLOWED_USERS = (process.env.QQ_ALLOWED_USERS ?? '3553934102').split(',')
 
-// Context commands that are handled directly without forwarding to Claude
+// Context commands forwarded to Claude Code with cmd flag
 const CONTEXT_COMMANDS = ['/compact', '/clear']
 
 import { mkdirSync, appendFileSync, readFileSync, existsSync, writeFileSync } from 'fs'
@@ -86,19 +86,11 @@ function connect() {
         text: msg.raw_message || '(empty)',
       }
 
-      // Handle context management commands directly
+      // Pass context management commands to Claude Code for real processing
       const cmd = record.text.trim().toLowerCase()
       if (CONTEXT_COMMANDS.includes(cmd)) {
-        if (cmd === '/compact') {
-          console.log(`[qq-bridge] Context compact requested by ${userId}`)
-          await directReply(userId, 'Context compressed. I\'ll be more concise going forward.')
-          // Write a compact command marker so the cron handler knows
-          appendFileSync(MSG_FILE, JSON.stringify({ ...record, text: '__CMD_COMPACT__' }) + '\n')
-        } else if (cmd === '/clear') {
-          console.log(`[qq-bridge] Context clear requested by ${userId}`)
-          await directReply(userId, 'Context cleared. Your next message starts a fresh conversation.')
-          appendFileSync(MSG_FILE, JSON.stringify({ ...record, text: '__CMD_CLEAR__' }) + '\n')
-        }
+        appendFileSync(MSG_FILE, JSON.stringify({ ...record, cmd: true }) + '\n')
+        console.log(`[qq-bridge] Context command: ${userId}: ${cmd}`)
         return
       }
 
