@@ -2,6 +2,13 @@
 
 > A Claude Code Channel tailored for Chinese developers ~
 
+[![License](https://img.shields.io/github/license/Slldyd2077/Claude-in-QQ)](https://github.com/Slldyd2077/Claude-in-QQ/blob/main/LICENSE)
+[![Bun](https://img.shields.io/badge/runtime-Bun-000?logo=bun&logoColor=white)](https://bun.sh/)
+[![NapCat](https://img.shields.io/badge/protocol-OneBot%20v11-12B886?logo=qq&logoColor=white)](https://github.com/NapNeko/NapCatQQ)
+[![Claude Code](https://img.shields.io/badge/powered%20by-Claude%20Code-D97757?logo=anthropic&logoColor=white)](https://claude.ai/code)
+![TypeScript](https://img.shields.io/badge/language-TypeScript-3178C6?logo=typescript&logoColor=white)
+[![GitHub stars](https://img.shields.io/github/stars/Slldyd2077/Claude-in-QQ?style=social)](https://github.com/Slldyd2077/Claude-in-QQ)
+
 [简体中文](./README.md)
 
 A QQ (NapCat/OneBot v11) channel for [Claude Code](https://claude.ai/code), enabling Claude to receive and reply to QQ messages in real time.
